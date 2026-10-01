@@ -1,0 +1,750 @@
+<title>DaVinci Resolve MCP Bridge</title>
+<meta name="description" content="Control DaVinci Resolve Free from Cursor, Claude or any MCP assistant. 162 tools, local AI, no Studio licence.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Azeret+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one continuous sheet of line-printer paper between two tractor-feed strips; every section is a stretch of the same printout, torn at perforations. */
+:root {
+  color-scheme: light;
+  --paper: #fbfcf7;
+  --bar: #dfecd8;
+  --ink: #1b2219;
+  --ink-2: #435140;
+  --rule: #a9bfa3;
+  --strip: #eef3ea;
+  --go: #1d5a28;
+  --go-ink: #fbfcf7;
+  /* Resolve marker colours, darkened to print on paper */
+  --m-green: #1d7028; --m-blue: #2457b8; --m-red: #b8322a; --m-cyan: #0d7a8c;
+  --m-purple: #7340ad; --m-yellow: #a37800; --m-pink: #b0367a;
+
+  --display: "Archivo", "Archivo Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Azeret Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --line: 1.75rem;           /* printer line pitch; green bars are 3 lines tall */
+  --strip-w: clamp(14px, 3.2vw, 34px);
+  --gutter: clamp(16px, 4vw, 56px);
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 1rem/1.6 var(--body);
+  font-stretch: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--m-green); color: var(--paper); }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.2em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--m-blue); outline-offset: 3px; }
+html { scrollbar-color: var(--rule) var(--strip); }
+
+/* ---------- the sheet ---------- */
+.sheet {
+  position: relative;
+  padding-inline: calc(var(--strip-w) + var(--gutter));
+  background:
+    repeating-linear-gradient(to bottom,
+      var(--bar) 0 calc(var(--line) * 3),
+      transparent calc(var(--line) * 3) calc(var(--line) * 6));
+}
+.sheet::before, .sheet::after {
+  /* tractor-feed strips with sprocket holes, separated from the page by a perforation */
+  content: "";
+  position: absolute; top: 0; bottom: 0;
+  width: var(--strip-w);
+  background-color: var(--strip);
+  background-image: radial-gradient(circle at 50% 50%, var(--paper) 0 calc(var(--strip-w) * 0.2), var(--rule) calc(var(--strip-w) * 0.2 + 0.5px) calc(var(--strip-w) * 0.2 + 1.5px), transparent calc(var(--strip-w) * 0.2 + 2px));
+  background-size: 100% calc(var(--line));
+  pointer-events: none;
+}
+.sheet::before { left: 0; border-right: 1px dashed var(--rule); }
+.sheet::after { right: 0; border-left: 1px dashed var(--rule); }
+
+.wrap { max-width: 1240px; margin-inline: auto; }
+
+/* ---------- type ---------- */
+h1, h2, h3 {
+  font-family: var(--display);
+  font-stretch: 62%;
+  font-weight: 850;
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  word-spacing: 0.1em;
+  text-wrap: balance;
+  margin: 0;
+}
+h1 { font-size: clamp(3.4rem, 9.5vw, 6rem); }
+h2 { font-size: clamp(2.4rem, 5.6vw, 4.25rem); }
+h3 { font-size: 1.6rem; font-stretch: 75%; font-weight: 800; line-height: 1; letter-spacing: -0.01em; }
+p { margin: 0; max-width: 62ch; text-wrap: pretty; }
+.lede { font-size: clamp(1.1rem, 1.6vw, 1.3rem); line-height: 1.5; color: var(--ink); }
+.mono, code, pre, kbd { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code { font-size: 0.88em; background: color-mix(in srgb, var(--paper) 60%, var(--bar)); padding: 0.05em 0.3em; border-radius: 3px; }
+
+/* ---------- EDL header strip ---------- */
+.edl-head {
+  display: flex; flex-wrap: wrap; gap: 0.25rem 2.5rem;
+  font: 500 0.78rem/var(--line) var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  padding-top: calc(var(--line) * 1);
+  min-height: calc(var(--line) * 3);
+  align-items: start;
+}
+.edl-head b { color: var(--ink); font-weight: 700; }
+.edl-head .credit { margin-left: auto; text-transform: none; letter-spacing: 0; }
+
+/* ---------- hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: calc(var(--line) * 1.5) clamp(1.5rem, 4vw, 4rem);
+  padding-block: calc(var(--line) * 1) calc(var(--line) * 3);
+  align-items: start;
+}
+.hero-copy { display: grid; gap: calc(var(--line) * 1); padding-top: calc(var(--line) * 0.5); min-width: 0; }
+.hero h1 em { font-style: normal; color: var(--go); }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.25rem; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font: 700 0.95rem/1 var(--body); font-stretch: 88%;
+  letter-spacing: 0.01em;
+  padding: 0.95rem 1.25rem;
+  border-radius: 2px;
+  border: 1.5px solid var(--ink);
+  text-decoration: none;
+  transition: background-color 160ms cubic-bezier(.2,.7,.2,1), color 160ms, transform 160ms cubic-bezier(.2,.7,.2,1);
+}
+.btn svg { width: 1.05em; height: 1.05em; flex: none; }
+.btn-go { background: var(--go); color: var(--go-ink); border-color: var(--go); }
+.btn-go:hover { background: var(--ink); border-color: var(--ink); text-decoration: none; transform: translateY(-1px); }
+.btn-plain { background: var(--paper); color: var(--ink); }
+.btn-plain:hover { background: var(--ink); color: var(--paper); text-decoration: none; transform: translateY(-1px); }
+.facts { display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; font: 500 0.8rem/1.5 var(--mono); color: var(--ink-2); }
+.facts span::before { content: ""; display: inline-block; width: 0.5em; height: 0.5em; background: var(--m-green); margin-right: 0.5rem; vertical-align: 0.1em; }
+
+/* ---------- the event list ---------- */
+.edl {
+  min-width: 0;
+  overflow: hidden;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+  font: 400 0.74rem/var(--line) var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.edl-top {
+  display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  padding: 0;
+  border-bottom: 1px solid var(--rule);
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2);
+}
+.edl-top b { color: var(--ink); }
+.ruler {
+  position: relative;
+  height: calc(var(--line) * 1.5);
+  margin: 0;
+  border-bottom: 1px solid var(--rule);
+  background:
+    linear-gradient(to right, var(--rule) 1px, transparent 1px) 0 100% / 10% 40% repeat-x,
+    linear-gradient(to right, var(--rule) 1px, transparent 1px) 0 100% / 2% 18% repeat-x;
+}
+.ruler .flag {
+  position: absolute; bottom: 0; width: 9px; height: 14px; margin-left: -4px;
+  background: var(--c);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
+  opacity: 0.45;
+  transition: opacity 200ms, transform 200ms cubic-bezier(.2,.7,.2,1);
+}
+.ruler .flag.on { opacity: 1; transform: translateY(-4px); }
+.ruler .head {
+  position: absolute; top: 0; bottom: -1px; width: 1.5px; background: var(--m-red);
+  transition: left 420ms cubic-bezier(.16,1,.3,1);
+}
+.ruler .head::before { content: ""; position: absolute; top: 0; left: -4px; border: 5px solid transparent; border-top: 6px solid var(--m-red); border-bottom: 0; }
+.ruler .tc { position: absolute; top: 2px; left: 0.25rem; font-size: 0.7rem; line-height: 1; color: var(--ink-2); }
+
+.events { list-style: none; margin: 0; padding: 0 0 var(--line); overflow-x: auto; }
+.ev { display: block; }
+.ev button {
+  all: unset; box-sizing: border-box; display: block; width: 100%;
+  padding: 0 0.5rem; cursor: pointer;
+  white-space: pre;
+}
+.ev button:focus-visible { outline: 2px solid var(--m-blue); outline-offset: -2px; }
+.ev .row { color: var(--ink); }
+.ev .row .n { font-weight: 700; }
+.ev .row .flagdot { display: inline-block; width: 0.6em; height: 0.6em; background: var(--c); vertical-align: 0.05em; margin-right: 0.4em; }
+.ev .row, .ev .say, .ev .tool { display: block; }
+.ev .say { color: var(--ink); white-space: pre-wrap; padding-left: 12ch; text-indent: -8ch; }
+.ev .say q { font-family: var(--body); font-size: 1.12em; font-weight: 600; quotes: "“" "”"; }
+.ev .tool { color: var(--ink-2); white-space: pre-wrap; padding-left: 12ch; text-indent: -8ch; }
+.ev .tool code { background: none; padding: 0; color: var(--c); font-weight: 700; font-size: 1em; }
+.ev:not(.on) .tool { display: none; }
+@media (prefers-reduced-motion: no-preference) { .ev.on .tool { animation: feed 320ms cubic-bezier(.16,1,.3,1) both; } }
+.ev button:hover, .ev.on button { background: color-mix(in srgb, var(--c) 9%, var(--paper)); }
+.ev.on .row .n { color: var(--c); }
+.edl-note { padding: 0; color: var(--ink-2); border-top: 1px dashed var(--rule); font-size: 0.75rem; }
+
+/* print-in on load: each line advances out of the platen; visible by default */
+@media (prefers-reduced-motion: no-preference) {
+  .js .ev { animation: feed 380ms cubic-bezier(.16,1,.3,1) both; animation-delay: calc(var(--i) * 70ms + 150ms); }
+  @keyframes feed { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+}
+
+/* ---------- perforation between sections ---------- */
+.perf {
+  position: relative; height: 0;
+  border-top: 2px dotted var(--rule);
+  margin-inline: calc((var(--strip-w) + var(--gutter)) * -1);
+}
+
+section.block { padding-block: calc(var(--line) * 3); }
+.block-head { display: grid; gap: calc(var(--line) * 0.75); margin-bottom: calc(var(--line) * 1.5); }
+
+/* ---------- signal path ---------- */
+.path {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.stage { padding: 1.1rem 1.1rem 1.25rem; display: grid; gap: 0.5rem; align-content: start; min-width: 0; position: relative; }
+.stage + .stage { border-left: 1px solid var(--ink); }
+.stage .where { order: 2; font: 500 0.75rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.stage .what { font: 700 1rem/1.25 var(--mono); overflow-wrap: anywhere; }
+.stage .what { order: 1; }
+.stage p { order: 3; font-size: 0.92rem; color: var(--ink-2); }
+.stage .wire { order: 0; }
+.stage.key { background: var(--go); color: var(--go-ink); }
+.stage.key .where, .stage.key p { color: var(--go-ink); }
+.wire {
+  position: absolute; top: 0; left: 0; z-index: 1;
+  font: 700 0.62rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--ink); color: var(--paper);
+  padding: 0.3rem 0.45rem; transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+.path-note { margin-top: 1.25rem; }
+
+/* ---------- free vs studio ---------- */
+.split { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(1.5rem, 4vw, 4rem); align-items: start; }
+.count {
+  font-family: var(--display); font-stretch: 62%; font-weight: 900;
+  font-size: clamp(5rem, 15vw, 10.5rem); line-height: 0.82; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.count small { font-size: 0.42em; color: var(--ink-2); font-weight: 700; letter-spacing: -0.01em; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--ink); background: var(--paper); }
+table { border-collapse: collapse; width: 100%; font: 400 0.85rem/1.45 var(--mono); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 0.55rem 0.85rem; vertical-align: top; }
+thead th { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--ink); color: var(--ink-2); }
+tbody tr + tr td { border-top: 1px dashed var(--rule); }
+td.ok { color: var(--m-green); font-weight: 700; }
+td.no { color: var(--m-red); font-weight: 700; }
+td.ok::before, td.no::before { content: ""; display: inline-block; width: 0.55em; height: 0.55em; margin-right: 0.45em; background: currentColor; vertical-align: 0.05em; }
+tr.ai td { background: color-mix(in srgb, var(--bar) 55%, var(--paper)); }
+td .via { display: block; color: var(--ink-2); font-size: 0.78rem; }
+
+.ai-list { display: grid; gap: 1rem; margin-top: calc(var(--line) * 1); }
+.ai-list p { font-size: 0.98rem; }
+
+/* ---------- tool index ---------- */
+.index { columns: 3 16rem; column-gap: clamp(1.5rem, 3vw, 3rem); margin-top: 0.5rem; }
+.area { break-inside: avoid; padding-block: 0 1.4rem; }
+.area h3 { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
+.area h3::before { content: ""; width: 0.55em; height: 0.55em; background: var(--c); flex: none; transform: translateY(-0.05em); }
+.area p { font-size: 0.95rem; color: var(--ink); }
+.area .t { display: block; margin-top: 0.35rem; font: 400 0.75rem/1.55 var(--mono); color: var(--ink-2); overflow-wrap: anywhere; }
+
+/* ---------- install ---------- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: calc(var(--line) * 1.5); counter-reset: step; }
+.step { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr); gap: 1.25rem; counter-increment: step; }
+.step::before {
+  content: counter(step);
+  font-family: var(--display); font-stretch: 62%; font-weight: 900; font-size: 4.25rem; line-height: 0.8;
+  color: var(--go);
+}
+.step-body { display: grid; gap: 0.85rem; min-width: 0; }
+.step-body > * { min-width: 0; }
+.need { display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; font: 500 0.85rem/1.5 var(--mono); }
+.need b { font-weight: 700; }
+
+.code { position: relative; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); min-width: 0; }
+.code pre { margin: 0; padding: 1rem 1.1rem; overflow-x: auto; font-size: 0.82rem; line-height: 1.6; }
+.code-bar {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 0.4rem 0.5rem 0.4rem 1.1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--paper) 25%, var(--ink));
+  font: 500 0.75rem/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--paper) 78%, var(--ink));
+}
+.code .copy {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font: 700 0.75rem/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+  background: var(--paper); color: var(--ink); border: 0; border-radius: 2px; padding: 0.45rem 0.6rem; cursor: pointer;
+}
+.code .copy:hover { background: var(--bar); }
+.code .copy svg { width: 0.95em; height: 0.95em; }
+.code .copy[data-state="done"] { background: var(--m-green); color: var(--paper); }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--ink); }
+.tabs button {
+  font: 700 0.78rem/1 var(--mono); letter-spacing: 0.04em; text-transform: uppercase;
+  background: transparent; color: var(--ink-2); border: 1px solid transparent; border-bottom: 0;
+  padding: 0.7rem 0.9rem; cursor: pointer; margin-bottom: -1px;
+}
+.tabs button[aria-selected="true"] { background: var(--paper); color: var(--ink); border-color: var(--ink); }
+.tabs button:hover { color: var(--ink); }
+.panel { border: 1px solid var(--ink); border-top: 0; background: var(--paper); padding: 0.9rem 1rem; font: 400 0.82rem/1.5 var(--mono); overflow-x: auto; }
+.panel code { background: none; padding: 0; font-size: 1em; white-space: nowrap; }
+
+details { border: 1px dashed var(--rule); background: var(--paper); }
+summary { cursor: pointer; padding: 0.7rem 0.9rem; font: 700 0.85rem/1.3 var(--body); }
+details .code { margin: 0 0.9rem 0.9rem; }
+
+.console {
+  display: inline-block; font: 500 0.85rem/1.5 var(--mono);
+  background: var(--ink); color: #b9f2b1; padding: 0.5rem 0.8rem;
+}
+.menu-path { font: 700 0.9rem/1.5 var(--mono); }
+
+/* ---------- limits + pipeline ---------- */
+.limits { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 0 2.5rem; }
+.limits li { padding-block: 0.85rem; border-top: 1px solid var(--rule); display: grid; gap: 0.2rem; }
+.limits .note-k { font: 700 0.75rem/1.2 var(--mono); letter-spacing: 0.06em; color: var(--m-red); }
+.limits b { font-family: var(--display); font-stretch: 75%; font-weight: 800; font-size: 1.2rem; }
+.limits span { color: var(--ink-2); font-size: 0.95rem; }
+
+.pipe { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); }
+.pipe > div { padding: 1.1rem 1.1rem 1.25rem 0; display: grid; gap: 0.35rem; align-content: start; min-width: 0; }
+.pipe > div + div { padding-left: 1.1rem; border-left: 1px dashed var(--rule); }
+.pipe .what { font: 700 0.95rem/1.3 var(--mono); }
+.pipe .this { color: var(--go); }
+.pipe p { font-size: 0.93rem; color: var(--ink-2); }
+
+/* ---------- close ---------- */
+.close { padding-block: calc(var(--line) * 3) calc(var(--line) * 2); display: grid; gap: calc(var(--line) * 1); }
+.close h2 { max-width: 14ch; }
+.eol { font: 700 0.8rem/var(--line) var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+footer.colophon {
+  padding-block: calc(var(--line) * 1) calc(var(--line) * 2);
+  border-top: 1px solid var(--ink);
+  display: grid; gap: 0.6rem;
+  font-size: 0.88rem; color: var(--ink-2);
+}
+footer.colophon p { max-width: 80ch; }
+footer.colophon strong { color: var(--ink); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1000px) {
+  .hero, .split { grid-template-columns: minmax(0, 1fr); }
+  .path { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage:nth-child(3) { border-left: 0; }
+  .stage:nth-child(n+3) { border-top: 1px solid var(--ink); }
+  .stage:nth-child(3) .wire { display: none; }
+}
+@media (max-width: 640px) {
+  :root { --line: 1.6rem; }
+  .sheet { padding-inline: calc(var(--strip-w) + 14px); }
+  .perf { margin-inline: calc((var(--strip-w) + 14px) * -1); }
+  .edl-head .credit { margin-left: 0; }
+  .path { grid-template-columns: minmax(0, 1fr); }
+  .stage + .stage { border-left: 0; border-top: 1px solid var(--ink); }
+  .wire { display: none; }
+  .pipe { grid-template-columns: minmax(0, 1fr); }
+  .pipe > div { padding-left: 0 !important; border-left: 0 !important; }
+  .pipe > div + div { border-top: 1px dashed var(--rule); }
+  .step { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+  .step::before { font-size: 3rem; }
+  .edl { font-size: 0.75rem; }
+  .ev .src, .ev .opt { display: none; }
+  .tbl-wrap table, .tbl-wrap tbody, .tbl-wrap tr, .tbl-wrap td { display: block; }
+  .tbl-wrap thead { display: none; }
+  .tbl-wrap tbody tr { display: grid; grid-template-columns: 1fr 1fr; padding: 0.6rem 0.85rem; gap: 0.15rem 1rem; }
+  .tbl-wrap tbody tr + tr { border-top: 1px dashed var(--rule); }
+  .tbl-wrap tbody tr + tr td { border-top: 0; }
+  .tbl-wrap td { padding: 0; }
+  .tbl-wrap td:first-child { grid-column: 1 / -1; font-weight: 700; color: var(--ink); }
+  .tbl-wrap td[data-label]:not(:first-child)::after { content: none; }
+  .tbl-wrap td.ok, .tbl-wrap td.no { font-size: 0.8rem; }
+  .tbl-wrap td:nth-child(2)::before, .tbl-wrap td:nth-child(3)::before { content: attr(data-label) ": "; display: inline; width: auto; height: auto; margin: 0; background: none; color: var(--ink-2); font-weight: 500; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="sheet">
+  <div class="wrap">
+
+    <header class="edl-head" aria-label="Edit list header">
+      <span>Title: <b>davinci-resolve-mcp</b></span>
+      <span>FCM: <b>Non-drop frame</b></span>
+      <span>Resolve <b>18+ Free or Studio</b></span>
+      <a class="credit" href="https://github.com/hiteshK03/davinci-resolve-mcp">by hiteshK03 · MIT</a>
+    </header>
+
+    <section class="hero" aria-labelledby="h-hero">
+      <div class="hero-copy">
+        <h1 id="h-hero">Talk to Resolve. <em>On the free version.</em></h1>
+        <p class="lede">An MCP server that lets Cursor, Claude or any MCP assistant edit in DaVinci Resolve for you. Every sentence becomes an edit. It's the only Resolve MCP server that works without the $295 Studio licence.</p>
+        <div class="actions">
+          <a class="btn btn-go" href="#install">
+            <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 3v11M5 9.5l5 5 5-5M4 17h12"/></svg>
+            Get it running
+          </a>
+          <a class="btn btn-plain" href="https://github.com/hiteshK03/davinci-resolve-mcp">
+            <svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            Source on GitHub
+          </a>
+        </div>
+        <div class="facts" aria-label="Key facts">
+          <span>162 tools</span><span>155 work on Free</span><span>Local AI, no API keys</span><span>CPU only</span>
+        </div>
+      </div>
+
+      <div class="edl" aria-label="Example session as an edit decision list">
+        <div class="edl-top"><span><b>Example session</b> · what you say, what it calls</span><span>Tap an event to see its tool</span></div>
+        <div class="ruler" id="ruler" aria-hidden="true"><span class="tc" id="tc">01:00:00:00</span><span class="head" id="head"></span></div>
+        <ol class="events" id="events"></ol>
+        <div class="edl-note">Timecodes are illustrative. Prompts and tool names are real.</div>
+      </div>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" aria-labelledby="h-how">
+      <div class="block-head">
+        <h2 id="h-how">It runs inside Resolve, so Free is enough.</h2>
+        <p class="lede">Other Resolve MCP servers drive Resolve from outside, through external scripting, which Blackmagic locks to Studio. This one puts a small bridge script inside Resolve through the Scripts menu, which every edition has. The MCP server talks to that bridge over localhost.</p>
+      </div>
+      <div class="path">
+        <div class="stage">
+          <span class="where">You</span>
+          <span class="what">Your AI assistant</span>
+          <p>Cursor, Claude Desktop, Windsurf or any MCP client.</p>
+        </div>
+        <div class="stage">
+          <span class="wire">MCP</span>
+          <span class="where">Your machine</span>
+          <span class="what">resolve_mcp_bridge.py</span>
+          <p>The MCP server. 162 tools, plus the local AI models.</p>
+        </div>
+        <div class="stage key">
+          <span class="wire">HTTP · localhost</span>
+          <span class="where">Inside Resolve · Workspace › Scripts</span>
+          <span class="what">CursorBridge.py</span>
+          <p>The bridge script. Available on Free, which is the whole trick.</p>
+        </div>
+        <div class="stage">
+          <span class="wire">Native API</span>
+          <span class="where">Resolve</span>
+          <span class="what">DaVinci Resolve API</span>
+          <p>Full read and write access to projects, timelines and media.</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" aria-labelledby="h-free">
+      <div class="split">
+        <div class="block-head">
+          <div class="count" aria-label="155 of 162 tools">155<small>/162</small></div>
+          <h2 id="h-free">tools work on Free.</h2>
+          <p class="lede">The other seven need Studio's Neural Engine. Five of those have a local replacement that runs on your CPU, covering voice isolation, background removal and subtitles. Smart Reframe and Stabilization have none. No API keys, no cloud, no subscription. Models download the first time you use them.</p>
+          <div class="ai-list">
+            <p><strong>Voice isolation.</strong> Separates vocals from music and noise with Meta's <a href="https://github.com/facebookresearch/demucs">Demucs v4</a>.</p>
+            <p><strong>Background removal.</strong> Cuts out backgrounds from images and video with <a href="https://github.com/danielgatis/rembg">rembg</a> and BiRefNet.</p>
+            <p><strong>Auto subtitles.</strong> Transcribes audio with word-level timestamps using <a href="https://github.com/SYSTRAN/faster-whisper">faster-whisper</a>.</p>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th scope="col">Feature</th><th scope="col">Studio</th><th scope="col">Free + bridge</th></tr></thead>
+            <tbody>
+              <tr><td data-label="Feature">Timeline editing, clips, markers</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr><td data-label="Feature">Color grading, LUTs, CDL</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr><td data-label="Feature">Rendering and export</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr><td data-label="Feature">Media pool, project management</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr><td data-label="Feature">Fusion compositions</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr><td data-label="Feature">Gallery and stills</td><td class="ok" data-label="Studio">Yes</td><td class="ok" data-label="Free + bridge">Yes</td></tr>
+              <tr class="ai"><td data-label="Feature">Voice isolation</td><td class="ok" data-label="Studio">Yes<span class="via">Neural Engine</span></td><td class="ok" data-label="Free + bridge">Yes<span class="via">Demucs v4, local</span></td></tr>
+              <tr class="ai"><td data-label="Feature">Background removal</td><td class="ok" data-label="Studio">Yes<span class="via">Magic Mask</span></td><td class="ok" data-label="Free + bridge">Yes<span class="via">rembg + BiRefNet, local</span></td></tr>
+              <tr class="ai"><td data-label="Feature">Auto subtitles</td><td class="ok" data-label="Studio">Yes<span class="via">Neural Engine</span></td><td class="ok" data-label="Free + bridge">Yes<span class="via">faster-whisper, local</span></td></tr>
+              <tr><td data-label="Feature">Smart Reframe</td><td class="ok" data-label="Studio">Yes</td><td class="no" data-label="Free + bridge">No</td></tr>
+              <tr><td data-label="Feature">Stabilization</td><td class="ok" data-label="Studio">Yes</td><td class="no" data-label="Free + bridge">No</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" aria-labelledby="h-tools">
+      <div class="block-head">
+        <h2 id="h-tools">Every page of Resolve, from one chat.</h2>
+        <p class="lede">162 tools across the whole program. The names in small type are the actual tools your assistant calls.</p>
+      </div>
+      <div class="index">
+        <div class="area" style="--c: var(--m-blue)"><h3>Timeline</h3><p>Create, rename, duplicate and switch timelines. Add, remove and insert clips at exact frames. Ripple delete.</p><span class="t">create_timeline · insert_to_timeline · delete_timeline_clips</span></div>
+        <div class="area" style="--c: var(--m-cyan)"><h3>Clips</h3><p>Color, opacity, zoom, pan, tilt, rotation, crop, flip, composite mode, scaling. Enable or disable.</p><span class="t">set_clip_properties · set_clip_color · set_clip_enabled</span></div>
+        <div class="area" style="--c: var(--m-green)"><h3>Markers and flags</h3><p>Colored markers with notes on timelines and individual clips. Flags.</p><span class="t">add_marker · add_clip_marker · add_clip_flag</span></div>
+        <div class="area" style="--c: var(--m-yellow)"><h3>Media pool</h3><p>Import files, browse folders, move, delete and relink clips, auto-sync audio, export metadata.</p><span class="t">import_media · relink_media_pool_clips · auto_sync_audio</span></div>
+        <div class="area" style="--c: var(--m-pink)"><h3>Color grading</h3><p>LUTs, CDL values, copying grades between clips, color versions and groups, resets.</p><span class="t">set_lut · set_cdl · copy_grades · add_color_version</span></div>
+        <div class="area" style="--c: var(--m-purple)"><h3>Fusion</h3><p>List, add, import, export, delete, load and rename Fusion compositions on any clip.</p><span class="t">add_fusion_comp_to_clip · export_fusion_comp_from_clip</span></div>
+        <div class="area" style="--c: var(--m-red)"><h3>Rendering</h3><p>Settings, format and codec, the render queue, start and stop, quick export.</p><span class="t">set_render_format · add_render_job · start_rendering · quick_export</span></div>
+        <div class="area" style="--c: var(--m-blue)"><h3>Titles</h3><p>Text+, generators and Fusion compositions straight onto the timeline.</p><span class="t">insert_title · insert_generator · insert_fusion_composition</span></div>
+        <div class="area" style="--c: var(--m-green)"><h3>Audio</h3><p>Fairlight presets, audio at the playhead, voice isolation per track or per clip.</p><span class="t">apply_fairlight_preset · insert_audio_at_playhead · voice_isolate</span></div>
+        <div class="area" style="--c: var(--m-cyan)"><h3>Gallery</h3><p>Albums, stills from the current frame, still export and import, labels.</p><span class="t">grab_still · export_stills · set_still_label</span></div>
+        <div class="area" style="--c: var(--m-yellow)"><h3>Tracks</h3><p>Add, delete, rename, lock and enable video, audio and subtitle tracks.</p><span class="t">add_track · set_track_lock · set_track_name</span></div>
+        <div class="area" style="--c: var(--m-purple)"><h3>Projects</h3><p>List, create, load, delete, archive, export and import projects. Switch databases.</p><span class="t">create_project · archive_project · set_database</span></div>
+        <div class="area" style="--c: var(--m-pink)"><h3>Local AI</h3><p>Transcribe audio, isolate vocals and remove backgrounds without Studio.</p><span class="t">transcribe_timeline · voice_isolate_timeline · remove_background_clip</span></div>
+      </div>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" id="install" aria-labelledby="h-install">
+      <div class="block-head">
+        <h2 id="h-install">Running in four steps.</h2>
+        <div class="need" aria-label="Requirements">
+          <span><b>DaVinci Resolve 18+</b> Free or Studio</span>
+          <span><b>Python 3.9+</b> on the same machine</span>
+          <span><b>An MCP assistant</b> Cursor, Claude Desktop…</span>
+        </div>
+      </div>
+
+      <ol class="steps">
+        <li class="step">
+          <div class="step-body">
+            <h3>Put the bridge script inside Resolve</h3>
+            <p>Copy <code>src/CursorBridge.py</code> into Resolve's scripts folder.</p>
+            <div>
+              <div class="tabs" role="tablist" aria-label="Operating system">
+                <button role="tab" id="tab-mac" aria-selected="true" aria-controls="p-mac">macOS</button>
+                <button role="tab" id="tab-win" aria-selected="false" aria-controls="p-win" tabindex="-1">Windows</button>
+                <button role="tab" id="tab-lin" aria-selected="false" aria-controls="p-lin" tabindex="-1">Linux</button>
+              </div>
+              <div class="panel" role="tabpanel" id="p-mac" aria-labelledby="tab-mac"><code>~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/</code></div>
+              <div class="panel" role="tabpanel" id="p-win" aria-labelledby="tab-win" hidden><code>%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\</code></div>
+              <div class="panel" role="tabpanel" id="p-lin" aria-labelledby="tab-lin" hidden><code>~/.local/share/DaVinciResolve/Fusion/Scripts/</code></div>
+            </div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Set up the MCP server</h3>
+            <div class="code"><div class="code-bar"><span>* CMD · Terminal</span><button class="copy" type="button" data-copy="c-setup"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg><span>Copy</span></button></div><pre id="c-setup">git clone https://github.com/hiteshK03/davinci-resolve-mcp.git
+cd davinci-resolve-mcp
+python -m venv venv
+source venv/bin/activate   # Windows: venv\Scripts\activate
+pip install -r requirements.txt</pre></div>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Tell your assistant about it</h3>
+            <p>Add this to <code>.cursor/mcp.json</code>, or your assistant's equivalent MCP config.</p>
+            <div class="code"><div class="code-bar"><span>* CMD · mcp.json</span><button class="copy" type="button" data-copy="c-json"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg><span>Copy</span></button></div><pre id="c-json">{
+  "mcpServers": {
+    "davinci-resolve": {
+      "command": "python",
+      "args": ["path/to/davinci-resolve-mcp/src/resolve_mcp_bridge.py"]
+    }
+  }
+}</pre></div>
+            <details>
+              <summary>Cursor in WSL, Resolve on Windows</summary>
+              <div class="code"><div class="code-bar"><span>* CMD · mcp.json for WSL</span><button class="copy" type="button" data-copy="c-wsl"><svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="5" width="9" height="9" rx="1"/><path d="M11 5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v7a1 1 0 001 1h2"/></svg><span>Copy</span></button></div><pre id="c-wsl">{
+  "mcpServers": {
+    "davinci-resolve": {
+      "command": "cmd.exe",
+      "args": ["/c", "C:\\path\\to\\venv\\Scripts\\python.exe", "C:\\path\\to\\src\\resolve_mcp_bridge.py"]
+    }
+  }
+}</pre></div>
+            </details>
+          </div>
+        </li>
+        <li class="step">
+          <div class="step-body">
+            <h3>Start the bridge and talk</h3>
+            <p>Open Resolve and choose <span class="menu-path">Workspace › Scripts › CursorBridge</span>. When the console shows this line, your assistant is in control:</p>
+            <div><span class="console">Bridge is running (read + write)</span></div>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" aria-labelledby="h-limits">
+      <div class="block-head">
+        <h2 id="h-limits">What it can't do yet.</h2>
+        <p class="lede">Most of these are limits of Resolve's scripting API and apply on Studio too. One is the cost of running AI on your CPU, and two are Studio-only features.</p>
+      </div>
+      <ul class="limits">
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Keyframe animation</b><span>The API sets static property values only. Animate by hand.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Fusion node parameters</b><span>Text and effect values inside a composition still need the Fusion page.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Transitions</b><span>Add them yourself from the Effects Library.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Background removal on video</b><span>It runs on the CPU, so long clips take a while.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Gallery stills</b><span>Resolve has to be on the Color page.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Smart Reframe and Stabilization</b><span>Studio only, with no local replacement.</span></li>
+      </ul>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="block" aria-labelledby="h-pipe">
+      <div class="block-head">
+        <h2 id="h-pipe">One of three servers in a full pipeline.</h2>
+        <p class="lede">Your assistant can work across all three in one conversation: generate an image, import it into Resolve, put it on the timeline and adjust it.</p>
+      </div>
+      <div class="pipe">
+        <div><span class="what this">DaVinci Resolve MCP</span><p>This project. Timelines, clips, color, rendering and local AI inside Resolve.</p></div>
+        <div><span class="what"><a href="https://github.com/hiteshK03/mcp-image-gen">mcp-image-gen</a></span><p>Generates images locally: backgrounds, textures, overlays. No API keys.</p></div>
+        <div><span class="what">Video Editor MCP</span><p>File-based processing with ffmpeg: overlays, transitions. No Resolve needed.</p></div>
+      </div>
+    </section>
+
+    <div class="perf" role="presentation"></div>
+
+    <section class="close" aria-labelledby="h-close">
+      <h2 id="h-close">Open Resolve. Start talking.</h2>
+      <div class="actions">
+        <a class="btn btn-go" href="#install">
+          <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 17V6M5 10.5l5-5 5 5M4 3h12"/></svg>
+          Back to the install steps
+        </a>
+        <a class="btn btn-plain" href="https://github.com/hiteshK03/davinci-resolve-mcp">Source on GitHub</a>
+      </div>
+      <span class="eol" aria-hidden="true">* End of list</span>
+    </section>
+
+    <footer class="colophon">
+      <p><strong>davinci-resolve-mcp</strong> is made by <a href="https://github.com/hiteshK03">hiteshK03 (Hitesh Kandala)</a> and released under the MIT licence. Source: <a href="https://github.com/hiteshK03/davinci-resolve-mcp">github.com/hiteshK03/davinci-resolve-mcp</a>.</p>
+      <p>This is an unofficial page about the project. DaVinci Resolve is a product of Blackmagic Design, which is not affiliated with this project.</p>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+document.documentElement.classList.add("js");
+
+// Prompts are verbatim from the project README; tool names are the real MCP tools they call.
+const EVENTS = [
+  { say: "What's on my timeline right now?", tools: ["get_timeline_info", "get_timeline_clips"], trk: "V", c: "--m-blue" },
+  { say: "Import these files into the media pool", tools: ["import_media"], trk: "B", c: "--m-yellow" },
+  { say: "Add a green marker at 5 seconds called 'intro ends'", tools: ["add_marker"], trk: "V", c: "--m-green" },
+  { say: "Insert a Text+ title at the playhead", tools: ["insert_title"], trk: "V", c: "--m-blue" },
+  { say: "Set the first clip on track 2 to 70% opacity", tools: ["set_clip_properties"], trk: "V2", c: "--m-cyan" },
+  { say: "Transcribe my timeline audio", tools: ["transcribe_timeline"], trk: "A", c: "--m-pink", note: "local faster-whisper" },
+  { say: "Isolate the vocals from my timeline", tools: ["voice_isolate_timeline"], trk: "A", c: "--m-green", note: "local Demucs v4" },
+  { say: "Apply this LUT to node 1 of the current clip", tools: ["set_lut"], trk: "V", c: "--m-purple" },
+  { say: "Set up an MP4 H.265 render and start it", tools: ["set_render_format", "add_render_job", "start_rendering"], trk: "B", c: "--m-red" },
+];
+
+const FPS = 24;
+const pad = n => String(n).padStart(2, "0");
+const tc = f => { const h = 1 + Math.floor(f / (FPS * 3600)); const m = Math.floor(f / (FPS * 60)) % 60; const s = Math.floor(f / FPS) % 60; return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f % FPS)}`; };
+const stc = f => { const m = Math.floor(f / (FPS * 60)) % 60; const s = Math.floor(f / FPS) % 60; return `00:${pad(m)}:${pad(s)}:${pad(f % FPS)}`; };
+
+// Illustrative record timecodes: each event occupies a few seconds of a one-minute timeline.
+const LENGTHS = [4, 6, 5, 3, 7, 6, 8, 5, 9].map(s => s * FPS);
+const TOTAL = LENGTHS.reduce((a, b) => a + b, 0);
+
+const list = document.getElementById("events");
+const ruler = document.getElementById("ruler");
+const head = document.getElementById("head");
+const tcEl = document.getElementById("tc");
+let start = 0;
+
+EVENTS.forEach((ev, i) => {
+  const len = LENGTHS[i];
+  ev.in = start; ev.out = start + len; start += len;
+  const n = String(i + 1).padStart(3, "0");
+  const trk = ev.trk.padEnd(4, " ");
+  const li = document.createElement("li");
+  li.className = "ev";
+  li.style.setProperty("--c", `var(${ev.c})`);
+  li.style.setProperty("--i", i);
+  const toolList = ev.tools.map(t => `<code>${t}</code>`).join(", ");
+  li.innerHTML =
+    `<button type="button" aria-expanded="false">` +
+    `<span class="row"><span class="flagdot" aria-hidden="true"></span><span class="n">${n}</span>  <span class="opt">AX       </span>${trk} <span class="opt">C        </span><span class="src">${stc(0)} ${stc(len)} </span>${tc(ev.in)} ${tc(ev.out)}</span>` +
+    `<span class="say">* SAY:  <q>${ev.say}</q></span>` +
+    `<span class="tool">* TOOL: ${toolList}${ev.note ? `  (${ev.note})` : ""}</span>` +
+    `</button>`;
+  list.appendChild(li);
+
+  const flag = document.createElement("span");
+  flag.className = "flag";
+  flag.style.setProperty("--c", `var(${ev.c})`);
+  flag.style.left = `${(ev.in / TOTAL) * 100}%`;
+  ruler.appendChild(flag);
+  ev.flag = flag; ev.li = li;
+
+  li.querySelector("button").addEventListener("click", () => select(i));
+});
+
+function select(i) {
+  EVENTS.forEach((ev, j) => {
+    const on = i === j;
+    ev.li.classList.toggle("on", on);
+    ev.li.querySelector("button").setAttribute("aria-expanded", String(on));
+    ev.flag.classList.toggle("on", on);
+  });
+  const ev = EVENTS[i];
+  head.style.left = `${(ev.in / TOTAL) * 100}%`;
+  tcEl.textContent = tc(ev.in);
+}
+select(2);
+
+// Install tabs
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function openTab(t) {
+  tabs.forEach(b => {
+    const on = b === t;
+    b.setAttribute("aria-selected", String(on));
+    b.tabIndex = on ? 0 : -1;
+    document.getElementById(b.getAttribute("aria-controls")).hidden = !on;
+  });
+}
+tabs.forEach((t, i) => {
+  t.addEventListener("click", () => openTab(t));
+  t.addEventListener("keydown", e => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+    openTab(next); next.focus();
+  });
+});
+const ua = navigator.userAgent || "";
+if (/Windows/i.test(ua)) openTab(document.getElementById("tab-win"));
+else if (/Linux/i.test(ua) && !/Android/i.test(ua)) openTab(document.getElementById("tab-lin"));
+
+// Copy buttons
+document.querySelectorAll(".copy").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const pre = document.getElementById(btn.dataset.copy);
+    const label = btn.querySelector("span");
+    try {
+      await navigator.clipboard.writeText(pre.textContent);
+      btn.dataset.state = "done"; label.textContent = "Copied";
+    } catch {
+      const r = document.createRange(); r.selectNodeContents(pre);
+      const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      label.textContent = "Press Ctrl+C";
+    }
+    setTimeout(() => { delete btn.dataset.state; label.textContent = "Copy"; }, 1800);
+  });
+});
+</script>

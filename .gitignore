@@ -8,3 +8,6 @@ logs/
 .env
 .DS_Store
 Thumbs.db
+
+# Impeccable review screenshots (regenerated each run)
+.impeccable/review/
