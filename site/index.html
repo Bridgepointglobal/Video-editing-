@@ -316,8 +316,9 @@ details .code { margin: 0 0.9rem 0.9rem; }
 
 /* ---------- limits + pipeline ---------- */
 .limits { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: 0 2.5rem; }
-.limits li { padding-block: 0.85rem; border-top: 1px solid var(--rule); display: grid; gap: 0.2rem; }
-.limits .note-k { font: 700 0.75rem/1.2 var(--mono); letter-spacing: 0.06em; color: var(--m-red); }
+.limits li { padding-block: 0.85rem; border-top: 1px solid var(--rule); }
+.limits li > span:last-child { display: block; margin-top: 0.2rem; }
+.limits .note-k { font: 700 0.8rem/1 var(--mono); letter-spacing: 0.04em; color: var(--m-red); margin-right: 0.5em; vertical-align: 0.15em; }
 .limits b { font-family: var(--display); font-stretch: 75%; font-weight: 800; font-size: 1.2rem; }
 .limits span { color: var(--ink-2); font-size: 0.95rem; }
 
@@ -592,12 +593,12 @@ pip install -r requirements.txt</pre></div>
         <p class="lede">Most of these are limits of Resolve's scripting API and apply on Studio too. One is the cost of running AI on your CPU, and two are Studio-only features.</p>
       </div>
       <ul class="limits">
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Keyframe animation</b><span>The API sets static property values only. Animate by hand.</span></li>
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Fusion node parameters</b><span>Text and effect values inside a composition still need the Fusion page.</span></li>
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Transitions</b><span>Add them yourself from the Effects Library.</span></li>
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Background removal on video</b><span>It runs on the CPU, so long clips take a while.</span></li>
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Gallery stills</b><span>Resolve has to be on the Color page.</span></li>
-        <li><span class="note-k" aria-hidden="true">* NOTE</span><b>Smart Reframe and Stabilization</b><span>Studio only, with no local replacement.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Keyframe animation</b><span>The API sets static property values only. Animate by hand.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Fusion node parameters</b><span>Text and effect values inside a composition still need the Fusion page.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Transitions</b><span>Add them yourself from the Effects Library.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Background removal on video</b><span>It runs on the CPU, so long clips take a while.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Gallery stills</b><span>Resolve has to be on the Color page.</span></li>
+        <li><span class="note-k" aria-hidden="true">* NOTE:</span><b>Smart Reframe and Stabilization</b><span>Studio only, with no local replacement.</span></li>
       </ul>
     </section>
 
