@@ -184,11 +184,11 @@ code { font-size: 0.88em; background: color-mix(in srgb, var(--paper) 60%, var(-
 .ev .say { color: var(--ink); white-space: pre-wrap; padding-left: 12ch; text-indent: -8ch; }
 .ev .say q { font-family: var(--body); font-size: 1.12em; font-weight: 600; quotes: "“" "”"; }
 .ev .tool { color: var(--ink-2); white-space: pre-wrap; padding-left: 12ch; text-indent: -8ch; }
-.ev .tool code { background: none; padding: 0; color: var(--c); font-weight: 700; font-size: 1em; }
+.ev .tool code { background: none; padding: 0; color: var(--ink); font-weight: 700; font-size: 1em; text-decoration: underline 2px var(--c); text-underline-offset: 0.25em; }
 .ev:not(.on) .tool { display: none; }
 @media (prefers-reduced-motion: no-preference) { .ev.on .tool { animation: feed 320ms cubic-bezier(.16,1,.3,1) both; } }
 .ev button:hover, .ev.on button { background: color-mix(in srgb, var(--c) 9%, var(--paper)); }
-.ev.on .row .n { color: var(--c); }
+.ev.on .row .n { text-decoration: underline 2px var(--c); text-underline-offset: 0.25em; }
 .edl-note { padding: 0; color: var(--ink-2); border-top: 1px dashed var(--rule); font-size: 0.75rem; }
 
 /* print-in on load: each line advances out of the platen; visible by default */
